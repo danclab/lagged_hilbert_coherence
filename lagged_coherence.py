@@ -98,7 +98,7 @@ def lagged_coherence_classic(signal, freqs, lags, srate, type='coh'):
                 lc = np.abs(num / denom)
             elif type=='plv':
                 expected_phase_diff = lag * 2 * math.pi
-                num = np.sum(np.exp(complex(1, 0) * (expected_phase_diff-phase_diff)), axis=1)
+                num = np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1)
                 denom = len(toi)
                 lc = np.abs(num / denom)
             elif type=='amp_coh':
@@ -218,7 +218,7 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
             # calculate the phase difference and amplitude product
             phase_diff = np.angle(f2) - np.angle(f1)
             amp_prod = np.abs(f1) * np.abs(f2)
-            if type=='coh':
+            if type == 'coh':
                 # Numerator - sum is over evaluation points
                 num = np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1)
                 # Scaling factor - sum is over evaluation points
@@ -227,15 +227,17 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
                 range_lcs = np.abs(num / denom)
                 # Threshold based on denominator
                 range_lcs[denom < thresh] = 0
-            elif type=='plv':
-                expected_phase_diff=lag*2*math.pi
-                num = np.sum(np.exp(complex(1, 0) * (expected_phase_diff-phase_diff)), axis=1)
-                denom = len(eval_pts)
+
+            elif type == 'plv':
+                expected_phase_diff = lag * 2 * math.pi
+                num = np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1)
+                denom = len(eval_pts) - 1
                 range_lcs = np.abs(num / denom)
                 amp_denom = np.sqrt(np.sum(np.abs(np.power(f1, 2)), axis=1) * np.sum(np.abs(np.power(f2, 2)), axis=1))
                 # Threshold based on amplitude denominator
                 range_lcs[amp_denom < thresh] = 0
-            elif type=='amp_coh':
+
+            elif type == 'amp_coh':
                 # Numerator - sum is over evaluation points
                 num = np.sum(amp_prod, axis=1)
                 # Scaling factor - sum is over evaluation points
@@ -244,8 +246,10 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
                 range_lcs = np.abs(num / denom)
                 # Threshold based on denominator
                 range_lcs[denom < thresh] = 0
+
             # Average over time points in between evaluation points
             f_lcs[:, l_idx] = np.mean(range_lcs, axis=1)
+
         return f_lcs
 
     lcs = Parallel(
@@ -254,5 +258,4 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
 
     lcs = np.array(lcs)
     lcs = np.moveaxis(lcs, [0, 1, 2], [1, 0, 2])
-
     return lcs
