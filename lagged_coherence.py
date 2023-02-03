@@ -240,7 +240,7 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
                 # Calculate LC
                 range_lacs = np.abs(num / denom)
                 # Threshold based on denominator
-                range_lacs[denom < thresh] = 0
+                range_lcs[denom < thresh] = 0
             # Average over time points in between evaluation points
             f_lcs[:, l_idx] = np.mean(range_lcs, axis=1)
         return f_lcs
