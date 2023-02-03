@@ -6,15 +6,40 @@ from scipy.signal.windows import hann
 
 
 def lagged_coherence_classic(signal, freqs, lags, srate, type='coh'):
+    """
+    Compute lagged coherence (or phase-locking value or amplitude coherence) for a signal.
+
+    Parameters
+    ----------
+    signal : ndarray
+        The input signal, shape (n_trials, n_pts).
+    freqs : array_like
+        Frequencies of interest.
+    lags : array_like
+        Lags of interest.
+    srate : float
+        Sampling rate in Hz.
+    type : str
+        Type of output: 'coh' for lagged coherence, 'plv' for lagged phase-locking value, or 'coh' for lagged amplitude
+        coherence.
+
+    Returns
+    -------
+    lcs : ndarray
+        The output, shape (n_trials, n_freqs, n_lags).
+    """
+
     # Number of trials
     n_trials = signal.shape[0]
+    # Number of time points
+    n_pts = signal.shape[1]
+
     # Number of frequencies
     n_freqs = len(freqs)
     # Number of lags
     n_lags = len(lags)
 
     # Create time
-    n_pts = signal.shape[1]
     T = n_pts * 1 / srate
     time = np.linspace(0, T, int(T * srate))
 
@@ -120,6 +145,16 @@ def lagged_coherence_classic(signal, freqs, lags, srate, type='coh'):
 
 
 def phase_shuffle(signal):
+    """
+    Shuffle the phase of a given signal.
+
+    Parameters:
+    signal (ndarray): Input signal, shape=(n_trials, n_pts)
+
+    Returns:
+    shuffled_matrix (ndarray): Shuffled signal, shape=(n_trials, n_pts)
+
+    """
     # Number of trials
     n_trials = signal.shape[0]
     # Create time
@@ -143,6 +178,32 @@ def phase_shuffle(signal):
 
 
 def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thresh_prctile=1, type='coh'):
+    """
+    Calculates the lagged surrogate coherence, phase-locking value, or amplitude coherence for a signal.
+
+    Parameters
+    ----------
+    signal : ndarray
+        Input signal with shape (n_trials, n_pts).
+    freqs : array_like
+        List of frequencies to calculate coherence for.
+    lags : array_like
+        List of lags to calculate coherence for.
+    srate : float
+        Sampling rate in Hz.
+    n_shuffles : int, optional
+        Number of shuffles, by default 1000.
+    thresh_prctile : float, optional
+        Threshold percentile, by default 1.
+    type : str, optional
+        Type of output: 'coh' for lagged coherence, 'plv' for lagged phase-locking value, or 'coh' for lagged amplitude
+        coherence.
+
+    Returns
+    -------
+    lcs : ndarray
+        The output, shape (n_trials, n_freqs, n_lags).
+    """
     # Number of trials
     n_trials = signal.shape[0]
     # Number of frequencies
