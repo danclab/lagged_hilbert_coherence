@@ -97,7 +97,8 @@ def lagged_coherence_classic(signal, freqs, lags, srate, type='coh'):
                 denom = np.sqrt(np.sum(np.abs(f1) ** 2, axis=-1) * np.sum(np.abs(f2) ** 2, axis=-1))
                 lc = np.abs(num / denom)
             elif type=='plv':
-                num = np.sum(np.exp(complex(1, 0) * phase_diff), axis=1)
+                expected_phase_diff = lag * 2 * math.pi
+                num = np.sum(np.exp(complex(1, 0) * (expected_phase_diff-phase_diff)), axis=1)
                 denom = len(toi)
                 lc = np.abs(num / denom)
             elif type=='amp_coh':
