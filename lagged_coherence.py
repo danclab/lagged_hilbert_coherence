@@ -96,7 +96,7 @@ def lagged_coherence_classic(signal, freqs, lags, srate, type='coh'):
                 denom = np.sqrt(np.sum(np.abs(f1) ** 2, axis=-1) * np.sum(np.abs(f2) ** 2, axis=-1))
                 lc = np.abs(num / denom)
             elif type=='plv':
-                num = np.sum(np.exp(complex(0, 1) * phase_diff), axis=1)
+                num = np.sum(np.exp(complex(1, 0) * phase_diff), axis=1)
                 denom = len(toi)
                 lc = np.abs(num / denom)
             elif type=='amp_coh':
@@ -226,7 +226,7 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
                 # Threshold based on denominator
                 range_lcs[denom < thresh] = 0
             elif type=='plv':
-                num = np.sum(np.exp(complex(0, 1) * phase_diff), axis=1)
+                num = np.sum(np.exp(complex(1, 0) * phase_diff), axis=1)
                 denom = len(eval_pts)
                 range_lcs = np.abs(num / denom)
                 amp_denom = np.sqrt(np.sum(np.abs(np.power(f1, 2)), axis=1) * np.sum(np.abs(np.power(f2, 2)), axis=1))
