@@ -226,7 +226,8 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
                 # Threshold based on denominator
                 range_lcs[denom < thresh] = 0
             elif type=='plv':
-                num = np.sum(np.exp(complex(1, 0) * phase_diff), axis=1)
+                expected_phase_diff=lag*2*math.pi
+                num = np.sum(np.exp(complex(1, 0) * (expected_phase_diff-phase_diff)), axis=1)
                 denom = len(eval_pts)
                 range_lcs = np.abs(num / denom)
                 amp_denom = np.sqrt(np.sum(np.abs(np.power(f1, 2)), axis=1) * np.sum(np.abs(np.power(f2, 2)), axis=1))
