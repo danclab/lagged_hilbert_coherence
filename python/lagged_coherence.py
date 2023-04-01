@@ -4,6 +4,8 @@ from joblib import Parallel, delayed
 from scipy.signal import hilbert
 from scipy.signal.windows import hann
 
+import iaaft
+
 
 def lagged_coherence_classic(signal, freqs, lags, srate, type='coh'):
     """
@@ -160,9 +162,6 @@ def phase_shuffle(signal):
     # Create time
     n_pts = signal.shape[1]
 
-    # Pre-allocate memory for shuffled_matrix
-    shuffled_matrix = np.zeros((n_trials, n_pts))
-
     # Fourier transform of matrix
     ts_fourier = np.fft.rfft(signal, axis=-1)
 
@@ -174,6 +173,7 @@ def phase_shuffle(signal):
 
     # Inverse Fourier transform to get shuffled matrix
     shuffled_matrix = np.fft.irfft(ts_fourier_new, axis=-1)
+
     return shuffled_matrix
 
 
@@ -220,24 +220,50 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
     df = np.diff(freqs)[0]
 
     def run_shuffle():
-        rand_signal = phase_shuffle(signal)
+        # rand_signal=np.zeros((n_trials,n_pts))
+        # for t in range(n_trials):
+        #     rand_signal[t,:] = iaaft.surrogates(x=signal[t,:], ns=1, verbose=False)
+        rand_signal = signal[:, np.random.permutation(signal.shape[1])]
+        #rand_signal = phase_shuffle(signal)
         padd_rand_signal = np.hstack([np.zeros((n_trials, n_pts)), rand_signal, np.zeros((n_trials, n_pts))])
+        # rand_signal_fft = np.fft.rfft(padd_rand_signal, axis=-1)
+        # rand_fft_frex = np.fft.rfftfreq(padd_rand_signal.shape[-1], d=1 / srate)
+        # sigma = df * .5
+        # thresh=np.zeros((n_freqs))
+        # for f in range(n_freqs):
+        #     freq=freqs[f]
+        #     kernel = np.exp(-((rand_fft_frex - freq) ** 2 / (2.0 * sigma ** 2)))
+        #
+        #     frand_signal_fft = np.multiply(rand_signal_fft, kernel)
+        #     frand_signal = np.fft.irfft(frand_signal_fft, axis=-1)
+        #     # Get analytic signal (phase and amplitude)
+        #     analytic_rand_signal = hilbert(frand_signal, N=None, axis=-1)[:, n_pts:2 * n_pts]
+        #
+        #     # Analytic signal at n=0...-1
+        #     f1 = analytic_rand_signal[:, 0:-1]
+        #     # Analytic signal at n=1,...
+        #     f2 = analytic_rand_signal[:, 1:]
+        #
+        #     amp_prod = np.abs(f1) * np.abs(f2)
+        #     thresh[f]=np.mean(amp_prod[:])
+        #
         # Get analytic signal (phase and amplitude)
-        analytic_signal = hilbert(padd_rand_signal, N=None, axis=-1)[:, n_pts:2 * n_pts]
+        analytic_rand_signal = hilbert(padd_rand_signal, N=None, axis=-1)[:, n_pts:2 * n_pts]
 
         # Analytic signal at n=0...-1
-        f1 = analytic_signal[:, 0:-1]
+        f1 = analytic_rand_signal[:, 0:-1]
         # Analytic signal at n=1,...
-        f2 = analytic_signal[:, 1:]
+        f2 = analytic_rand_signal[:, 1:]
 
         amp_prod = np.abs(f1) * np.abs(f2)
-        return np.mean(amp_prod, axis=0)
+        thresh = np.mean(amp_prod[:])
+        return thresh
 
     amp_prods = Parallel(
         n_jobs=-1
     )(delayed(run_shuffle)() for i in range(n_shuffles))
     amp_prods = np.array(amp_prods)
-    thresh = np.percentile(amp_prods[:], thresh_prctile)
+    thresh = np.percentile(amp_prods, thresh_prctile)
 
     padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
     signal_fft = np.fft.rfft(padd_signal, axis=-1)
@@ -282,8 +308,10 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
             if type == 'coh':
                 # Numerator - sum is over evaluation points
                 num = np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1)
+                #num = np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff))
                 # Scaling factor - sum is over evaluation points
                 denom = np.sqrt(np.sum(np.abs(np.power(f1, 2)), axis=1) * np.sum(np.abs(np.power(f2, 2)), axis=1))
+                #denom = np.sqrt(np.sum(np.abs(np.power(f1, 2))) * np.sum(np.abs(np.power(f2, 2))))
                 # Calculate LC
                 range_lcs = np.abs(num / denom)
                 # Threshold based on denominator
@@ -309,7 +337,8 @@ def lagged_surrogate_coherence(signal, freqs, lags, srate, n_shuffles=1000, thre
                 range_lcs[denom < thresh] = 0
 
             # Average over time points in between evaluation points
-            f_lcs[:, l_idx] = np.mean(range_lcs, axis=1)
+            #f_lcs[:, l_idx] = np.mean(range_lcs, axis=1)
+            f_lcs[:, l_idx] = np.max(range_lcs, axis=1)
 
         return f_lcs
 
