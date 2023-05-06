@@ -1,8 +1,8 @@
-# continuous_lc
-Continuous lagged coherence, phase-locking value, and amplitude coherence
+# lagged_hilbert_coherence
+Lagged Hilbert coherence, phase-locking value, and amplitude coherence
 
 ## Requirements
-joblib, scipy, numpy
+joblib, scipy, numpy, statsmodels
 
 # Python files
 - lagged_coherence.py: core functions
