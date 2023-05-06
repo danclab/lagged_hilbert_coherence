@@ -366,11 +366,8 @@ ylabel('Frequency (Hz)');
 % Temporal shuffling may not be the best surrogate method though
 
 % Compute threshold as 5th percentile of shuffled amplitude products
-n_shuffles = 100;
-amp_prods = zeros(n_shuffles, 1);
-for i = 1:n_shuffles
-    amp_prods(i) = temporal_shuffle(signal);
-end
+n_shuffles=1000;
+amp_prods=ar_surr(signal, n_shuffles);
 threshold = prctile(amp_prods, 5);
 
 % Evaluate at 2-10 lag cycles
@@ -395,67 +392,3 @@ colorbar;
 xlabel('Lag (cycles)');
 ylabel('Frequency (Hz)');
 
-
-
-%% Let's see what happens when the frequency of a signal changes over time
-% Generate a simulated signal that starts as a 15Hz oscillation and
-% increases to 30Hz, plus white noise
-
-% Time step (s)
-dt=0.001;
-% Duration (s)
-T=5;
-% Time vector
-time=0:dt:T-dt;
-% Sampling rate
-srate=1/dt;
-
-f0 = 15;        % Initial frequency
-f1 = 30;        % Final frequency
-k = (f1-f0)/1;  % Rate of change of frequency
-
-% Burst signal
-s1 = sin(2*pi*(f0+(f1-f0)*(time/max(time))).*time);
-
-% Generated signal
-signal = s1 + rand(1, length(time)) * 2 - 1;
-
-figure();
-subplot(2,1,1)
-plot(time,s1)
-xlim([time(1), time(end)])
-subplot(2,1,2)
-plot(time,signal)
-xlim([time(1), time(end)])
-xlabel('Time (s)')
-
-
-% Compute threshold as 5th percentile of shuffled amplitude products
-n_shuffles = 100;
-amp_prods = zeros(n_shuffles, 1);
-for i = 1:n_shuffles
-    amp_prods(i) = temporal_shuffle(signal);
-end
-threshold = prctile(amp_prods, 5);
-
-% Evaluate at 2-10 lag cycles
-lags = 2:.5:10;
-% Evaluate at 5-100 Hz
-freqs = linspace(5, 100, 100);
-
-lcs = zeros(length(freqs), length(lags));
-for f_idx = 1:length(freqs)
-    for l_idx = 1:length(lags)
-        [num, denom, lc] = lagged_hilbert_coherence(signal, srate, freqs(f_idx), lags(l_idx));
-        % Only consider lc if denominator greater than threshold
-        if mean(denom) >= threshold
-            lcs(f_idx, l_idx) = lc;
-        end
-    end
-end
-
-figure();
-contourf(lags, freqs, lcs, 100,'LineColor','none');
-colorbar;
-xlabel('Lag (cycles)');
-ylabel('Frequency (Hz)');
