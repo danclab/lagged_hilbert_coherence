@@ -21,9 +21,13 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
         Lags of interest.
     srate : float
         Sampling rate in Hz.
+    win_size: float
+        Size of the time window for each chunk in cycles (default = 3). If None, set to be equal to the evaluated lag.
     type : str
         Type of output: 'coh' for lagged coherence, 'plv' for lagged phase-locking value, or 'coh' for lagged amplitude
         coherence.
+    n_jobs: integer
+        The number of parallel jobs to run (default = -1). -1 means using all processors.
 
     Returns
     -------
@@ -54,7 +58,7 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
 
             # Width of time window to compute fourier coefficients in (cycles)
             if win_size is None:
-                f_width=lag
+                f_width = lag
             else:
                 f_width = win_size
 
@@ -132,6 +136,30 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
 
 
 def lagged_hilbert_coherence(signal, freqs, lags, srate, n_shuffles=1000, thresh_prctile=1, type='coh', n_jobs=-1):
+    """
+    Compute lagged Hilbert coherence (or phase-locking value or amplitude coherence) for a signal.
+
+    Parameters
+    ----------
+    signal : ndarray
+        The input signal, shape (n_trials, n_pts).
+    freqs : array_like
+        Frequencies of interest.
+    lags : array_like
+        Lags of interest.
+    srate : float
+        Sampling rate in Hz.
+    type : str
+        Type of output: 'coh' for lagged coherence, 'plv' for lagged phase-locking value, or 'coh' for lagged amplitude
+        coherence.
+    n_jobs: integer
+        The number of parallel jobs to run (default = -1). -1 means using all processors.
+
+    Returns
+    -------
+    lcs : ndarray
+        The output, shape (n_trials, n_freqs, n_lags).
+    """
     n_trials = signal.shape[0]
     n_pts = signal.shape[-1]
     T = n_pts * 1 / srate
