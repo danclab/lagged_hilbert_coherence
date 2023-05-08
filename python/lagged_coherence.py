@@ -66,12 +66,12 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
             width = f_width / freq
 
             # Half width
-            halfwidth = width/2
+            halfwidth = width / 2
 
             # Time steps
             start = time[0] + halfwidth
             stop = time[-1] - halfwidth
-            step = lag/freq
+            step = lag / freq
             toi = np.arange(start, stop, step)
 
             # Initialize FFT coefficients - time step
@@ -135,7 +135,47 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
     return lcs
 
 
-def lagged_hilbert_coherence(signal, freqs, lags, srate, n_shuffles=1000, thresh_prctile=1, type='coh', n_jobs=-1):
+def arma_surr(signal, n_shuffles=1000):
+    n_trials = signal.shape[0]
+    n_pts = signal.shape[-1]
+
+    # Subtract out the mean and linear trend
+    detrend_ord = 1
+    x = sm.tsa.tsatools.detrend(signal, order=detrend_ord, axis=-1)
+
+    amp_prods = np.zeros(n_shuffles * n_trials)
+    pad = np.zeros(n_pts)
+
+    for i in range(n_trials):
+        # Estimate an AR model
+        mdl_order = (1, 0, 1)
+        mdl = sm.tsa.ARIMA(x[i, :], order=mdl_order)
+        result = mdl.fit()
+        # Make a generative model using the AR parameters
+        arma_process = sm.tsa.ArmaProcess.from_estimation(result)
+        # Simulate a bunch of time-courses from the model
+        x_sim = arma_process.generate_sample((n_pts, n_shuffles),
+                                             scale=result.resid.std())
+        # Subtract out the mean and linear trend
+        x_sim = sm.tsa.tsatools.detrend(x_sim, order=detrend_ord, axis=0)
+
+        for j in range(n_shuffles):
+            padd_rand_signal = np.hstack([pad, x_sim[:, j], pad])
+            # Get analytic signal (phase and amplitude)
+            analytic_rand_signal = hilbert(padd_rand_signal, N=None)[n_pts:2 * n_pts]
+
+            # Analytic signal at n=0...-1
+            f1 = analytic_rand_signal[0:-1]
+            # Analytic signal at n=1,...
+            f2 = analytic_rand_signal[1:]
+
+            amp_prod = np.abs(f1) * np.abs(f2)
+            amp_prods[i * n_shuffles + j] = np.mean(amp_prod[:])
+
+    return amp_prods
+
+
+def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=1000, type='coh', n_jobs=-1):
     """
     Compute lagged Hilbert coherence (or phase-locking value or amplitude coherence) for a signal.
 
@@ -149,6 +189,10 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, n_shuffles=1000, thresh
         Lags of interest.
     srate : float
         Sampling rate in Hz.
+    df : float
+        Frequency resolution in Hz. If None (default), computed as the difference in frequencies.
+    n_shuffles: integer
+        Number of times to shuffle data
     type : str
         Type of output: 'coh' for lagged coherence, 'plv' for lagged phase-locking value, or 'coh' for lagged amplitude
         coherence.
@@ -173,51 +217,13 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, n_shuffles=1000, thresh
     # Bandpass filtering using multiplication by a Gaussian kernel
     # in the frequency domain
     # Frequency resolution
-    df = np.diff(freqs)[0]
-
-    def ar_surr(signal):
-        n_trials = signal.shape[0]
-        n_pts = signal.shape[-1]
-
-        # Subtract out the mean and linear trend
-        detrend_ord = 1
-        x = sm.tsa.tsatools.detrend(signal, order=detrend_ord, axis=1)
-
-        amp_prods = np.zeros(n_shuffles * n_trials)
-        pad = np.zeros(n_pts)
-
-        for i in range(n_trials):
-            # Estimate an AR model
-            mdl_order = (1, 0, 0)
-            mdl = sm.tsa.ARIMA(x[i, :], order=mdl_order)
-            result = mdl.fit()
-            # Make a generative model using the AR parameters
-            arma_process = sm.tsa.ArmaProcess.from_coeffs(result.arparams)
-            # Simulate a bunch of time-courses from the model
-            x_sim = arma_process.generate_sample((n_pts, n_shuffles),
-                                                 scale=result.resid.std())
-            # Subtract out the mean and linear trend
-            x_sim = sm.tsa.tsatools.detrend(x_sim, order=detrend_ord, axis=0)
-
-            for j in range(n_shuffles):
-                padd_rand_signal = np.hstack([pad, x_sim[:, j], pad])
-                # Get analytic signal (phase and amplitude)
-                analytic_rand_signal = hilbert(padd_rand_signal, N=None)[n_pts:2 * n_pts]
-
-                # Analytic signal at n=0...-1
-                f1 = analytic_rand_signal[0:-1]
-                # Analytic signal at n=1,...
-                f2 = analytic_rand_signal[1:]
-
-                amp_prod = np.abs(f1) * np.abs(f2)
-                amp_prods[i * n_shuffles + j] = np.mean(amp_prod[:])
-
-        return amp_prods
+    if df is None:
+        df = np.diff(freqs)[0]
 
     # Compute threshold as 5th percentile of shuffled amplitude
     # products
-    amp_prods = ar_surr(signal)
-    thresh = np.percentile(amp_prods, thresh_prctile)
+    amp_prods = arma_surr(signal, n_shuffles=n_shuffles)
+    thresh = np.percentile(amp_prods, 95)
 
     padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
     signal_fft = np.fft.rfft(padd_signal, axis=-1)
