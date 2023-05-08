@@ -1,6 +1,7 @@
 
 
-%% Generate a simulated signal with 3, bursts at 15Hz with 5 cycles
+%% Simulated signal
+% Generate a simulated signal with 3 bursts at 15Hz with 5 cycles
 % and an oscillation at 20Hz, plus white noise
 
 % Time step (s)
@@ -77,10 +78,9 @@ xlim([time(1) time(end)]);
 xlabel('Time (s)');
 
 
-
-
-%% Bandpass filtering using multiplication by a Gaussian kernel
-% in the frequency domain
+%% Lagged Hilbert coherence
+% Lagged Hilbert coherence starts with bandpass filtering using
+% multiplication by a Gaussian kernel in the frequency domain
 
 % Frequencies to evaluate (just to compute desired frequency
 % resolution in this step)
@@ -145,8 +145,7 @@ ylabel('Amplitude')
 
 
 
-
-%% Get analytic signal of bandpass filtered data (phase and amplitude)
+% Get analytic signal of bandpass filtered data (phase and amplitude)
 analytic_signal = hilbert(f_signal);
 % Cut off padding
 analytic_signal=analytic_signal(:, length(time)+1:2 * length(time));
@@ -179,7 +178,7 @@ ylabel('Phase');
 
 
 
-%% Evaluate lagged coherence at a lag of 3 cycles
+% Evaluate lagged coherence at a lag of 3 cycles
 lag=3;
 
 % Duration of this lag in s
@@ -262,7 +261,7 @@ disp(lc);
 
 
 
-%% This was evaluated starting at time t=0 and looking 3 cycles ahead, 
+% This was evaluated starting at time t=0 and looking 3 cycles ahead, 
 % but what about the points in between?
 
 % Number of points between the first and next evaluation time points
@@ -290,7 +289,7 @@ lc = mean(lc);
 disp(lc);
 
 
-%% Evaluate at 2-10 lag cycles
+% Evaluate at 2-10 lag cycles
 lags = 2:.5:10;
 % Evaluate at 15 and 20 Hz
 freqs = [15, 20];
@@ -314,25 +313,25 @@ ylabel('Lagged coherence')
 
 
 
-%% What about at a frequency where we know there is only noise?
-[num, denom, lc] = lagged_hilbert_coh_demo(signal, srate, 50, 5, df);
+% What about at a frequency where we know there is only noise?
+[num, denom, lc] = lagged_hilbert_coh_demo(signal, srate, 50, 3, df);
 disp(lc);
 
 
 
 
-%% What's going on?
-[num1, denom1, lc1] = lagged_hilbert_coh_demo(signal, srate, 15, 5, df);
-[num2, denom2, lc2] = lagged_hilbert_coh_demo(signal, srate, 50, 5, df);
+% What's going on?
+[num1, denom1, lc1] = lagged_hilbert_coh_demo(signal, srate, 15, 3, df);
+[num2, denom2, lc2] = lagged_hilbert_coh_demo(signal, srate, 50, 3, df);
 
 fprintf('15Hz: numerator=%f, denominator=%f, lc=%f\n', mean(num1), mean(denom1), lc1);
-fprintf('40Hz: numerator=%f, denominator=%f, lc=%f\n', mean(num2), mean(denom2), lc2);
+fprintf('50Hz: numerator=%f, denominator=%f, lc=%f\n', mean(num2), mean(denom2), lc2);
 
 
 
 
-%% At 40Hz, the numerator and denominator are both low, but nearly exactly the same
-% I think this is due to amplitude correlations introduced by bandpass filtering in a freq
+% At 40Hz, the numerator and denominator are both low, but nearly exactly the same
+% This is due to amplitude correlations introduced by bandpass filtering in a freq
 % range with low power (https://journals.physiology.org/doi/full/10.1152/jn.00851.2013)
 % Here's the effect over a range of frequencies
 
@@ -365,7 +364,7 @@ ylabel('Frequency (Hz)');
 
 % Compute threshold as 95th percentile of shuffled amplitude products
 n_shuffles=1000;
-amp_prods=ar_surr(signal, n_shuffles);
+amp_prods=arma_surr(signal, n_shuffles);
 threshold = prctile(amp_prods, 95);
 
 % Evaluate at 2-10 lag cycles

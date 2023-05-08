@@ -28,7 +28,7 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
         df = params.df;
     end
         
-    amp_prods=ar_surr(signal, params.n_shuffles);
+    amp_prods=arma_surr(signal, params.n_shuffles);
     threshold = prctile(amp_prods, 95);
 
     padd_signal = [zeros(size(signal)), signal, zeros(size(signal))];
