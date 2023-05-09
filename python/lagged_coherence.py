@@ -141,7 +141,7 @@ def ar_surr(signal, n_shuffles=1000):
 
     # Subtract out the mean and linear trend
     detrend_ord = 1
-    x = sm.tsa.tsatools.detrend(signal, order=detrend_ord, axis=-1)
+    x = sm.tsa.tsatools.detrend(signal, order=detrend_ord, axis=1)
 
     amp_prods = np.zeros(n_shuffles * n_trials)
     pad = np.zeros(n_pts)
@@ -154,13 +154,13 @@ def ar_surr(signal, n_shuffles=1000):
         # Make a generative model using the AR parameters
         arma_process = sm.tsa.ArmaProcess.from_estimation(result)
         # Simulate a bunch of time-courses from the model
-        x_sim = arma_process.generate_sample((n_pts, n_shuffles),
-                                             scale=result.resid.std())
+        x_sim = arma_process.generate_sample((n_shuffles,n_pts),
+                                             scale=result.resid.std(), axis=1)
         # Subtract out the mean and linear trend
-        x_sim = sm.tsa.tsatools.detrend(x_sim, order=detrend_ord, axis=0)
+        x_sim = sm.tsa.tsatools.detrend(x_sim, order=detrend_ord, axis=1)
 
         for j in range(n_shuffles):
-            padd_rand_signal = np.hstack([pad, x_sim[:, j], pad])
+            padd_rand_signal = np.hstack([pad, x_sim[j, :], pad])
             # Get analytic signal (phase and amplitude)
             analytic_rand_signal = hilbert(padd_rand_signal, N=None)[n_pts:2 * n_pts]
 
