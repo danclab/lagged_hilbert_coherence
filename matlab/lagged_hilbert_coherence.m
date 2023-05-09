@@ -10,6 +10,11 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
         end
     end
 
+    detrend_ord = 1;
+    for i=1:size(signal,1)
+        signal(i,:)=detrend(signal(i,:), detrend_ord);
+    end
+        
     n_trials = size(signal,1);
     n_pts = size(signal,2);
     dt=1/srate;
