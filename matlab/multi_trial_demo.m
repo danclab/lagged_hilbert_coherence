@@ -92,6 +92,7 @@ trial_lcs_hilbert=lagged_hilbert_coherence(signal, freqs, lags, srate);
 
 figure();
 contourf(lags, freqs, squeeze(mean(trial_lcs_hilbert,1)), 100,'LineColor','none');
+set(gca,'clim',[0 1]);
 colorbar;
 xlabel('Lag (cycles)');
 ylabel('Frequency (Hz)');
@@ -129,6 +130,7 @@ trial_lcs_hilbert=lagged_hilbert_coherence(signal, freqs, lags, srate);
 
 figure();
 contourf(lags, freqs, squeeze(mean(trial_lcs_hilbert,1)), 100,'LineColor','none');
+set(gca,'clim',[0 1]);
 colorbar;
 xlabel('Lag (cycles)');
 ylabel('Frequency (Hz)');

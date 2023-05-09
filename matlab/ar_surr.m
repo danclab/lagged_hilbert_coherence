@@ -1,4 +1,4 @@
-function amp_prods=arma_surr(signal, n_shuffles)
+function amp_prods=ar_surr(signal, n_shuffles)
 
     n_trials = size(signal,1);
     n_pts = size(signal,2);
@@ -10,23 +10,22 @@ function amp_prods=arma_surr(signal, n_shuffles)
         % Subtract out the mean and linear trend
         detrend_ord = 1;
         x=detrend(signal(i,:)-mean(signal(i,:)), detrend_ord);
-        %x=signal(i,:);
-
+        
         % Estimate an AR model
-        mdl = arima(1,0,1);
+        mdl = arima(1,0,0);
         mdl = estimate(mdl, x', 'Display', 'off');
 
-        for j=1:n_shuffles
-            x_sim = simulate(mdl,n_pts)';
+        x_sim = simulate(mdl,n_pts,'NumPaths',1000);
 
-            % Subtract out the mean and linear trend
-            x_sim=detrend(x_sim-mean(x_sim), detrend_ord);
+        % Subtract out the mean and linear trend
+        x_sim=detrend(x_sim-mean(x_sim,2), detrend_ord)';
         
-            padd_rand_signal = [pad, x_sim, pad];
+        for j=1:n_shuffles
+            padd_rand_signal = [pad, x_sim(j,:), pad];
             % Get analytic signal (phase and amplitude)
             analytic_rand_signal = hilbert(padd_rand_signal);
             % Cut off padding
-            analytic_rand_signal=analytic_rand_signal(:, n_pts+1:2 * n_pts);
+            analytic_rand_signal=analytic_rand_signal(n_pts+1:2 * n_pts);
 
             % Analytic signal at n=0...-1
             f1 = analytic_rand_signal(1:end-1);

@@ -28,7 +28,7 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
         df = params.df;
     end
         
-    amp_prods=arma_surr(signal, params.n_shuffles);
+    amp_prods=ar_surr(signal, params.n_shuffles);
     threshold = prctile(amp_prods, 95);
 
     padd_signal = [zeros(size(signal)), signal, zeros(size(signal))];
@@ -84,10 +84,12 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
             n_range = eval_pts(2) - eval_pts(1);
 
             % Analytic signal at n=0...n_evals-1 evaluation points, and m=0..n_range time points in between
-            f1 = analytic_signal(:, eval_pts(1:end-1) + (0:n_range-1));
+            %f1 = analytic_signal(:, eval_pts(1:end-1) + (0:n_range-1));
+            f1=reshape(analytic_signal(:, eval_pts(1:end-1) + (0:n_range-1)),[n_trials,length(eval_pts)-1,n_range]);
 
             % Analytic signal at n=1...n_evals evaluation points, and m=0..n_range time points in between
-            f2 = analytic_signal(:, eval_pts(2:end) + (0:n_range-1));
+            %f2 = analytic_signal(:, eval_pts(2:end) + (0:n_range-1));
+            f2=reshape(analytic_signal(:, eval_pts(2:end) + (0:n_range-1)),[n_trials,length(eval_pts)-1,n_range]);
 
             % Calculate the phase difference and amplitude product
             phase_diff = angle(f2) - angle(f1);
@@ -95,28 +97,28 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
 
             if strcmp(params.type,'coh')
                 % Lagged coherence
-                num = abs(sum(amp_prod .* exp(1i * phase_diff),2));
+                num = squeeze(abs(sum(amp_prod .* exp(1i * phase_diff),2)));
                 f1_pow = f1.^2;
                 f2_pow = f2.^2;
-                denom = sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2));
-                lc = num / denom;
+                denom = squeeze(sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2)));
+                lc = num ./ denom;
                 lc(denom<threshold)=0;
             elseif strcmp(params.type,'plv')
                 expected_phase_diff = lag * 2 * pi;
-                num = abs(sum(exp(1i * (expected_phase_diff-phase_diff)),2));
+                num = squeeze(abs(sum(exp(1i * (expected_phase_diff-phase_diff)),2)));
                 denom = length(eval_pts) - 1;
-                lc = num / denom;
+                lc = num ./ denom;
                 f1_pow = f1.^2;
                 f2_pow = f2.^2;
-                amp_denom = sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2));                
+                amp_denom = squeeze(sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2)));                
                 % Threshold based on amplitude denominator
                 lc(amp_denom<threshold)=0;
             elseif strcmp(params.type,'amp_coh')
-                num = abs(sum(amp_prod,2));
+                num = squeeze(abs(sum(amp_prod,2)));
                 f1_pow = f1.^2;
                 f2_pow = f2.^2;
-                denom = sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2));
-                lc = num / denom;
+                denom = squeeze(sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2)));
+                lc = num ./ denom;
                 lc(denom<threshold)=0;
             end
             
