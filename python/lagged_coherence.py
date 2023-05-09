@@ -135,7 +135,7 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
     return lcs
 
 
-def arma_surr(signal, n_shuffles=1000):
+def ar_surr(signal, n_shuffles=1000):
     n_trials = signal.shape[0]
     n_pts = signal.shape[-1]
 
@@ -148,7 +148,7 @@ def arma_surr(signal, n_shuffles=1000):
 
     for i in range(n_trials):
         # Estimate an AR model
-        mdl_order = (1, 0, 1)
+        mdl_order = (1, 0, 0)
         mdl = sm.tsa.ARIMA(x[i, :], order=mdl_order)
         result = mdl.fit()
         # Make a generative model using the AR parameters
@@ -222,7 +222,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
     # Compute threshold as 5th percentile of shuffled amplitude
     # products
-    amp_prods = arma_surr(signal, n_shuffles=n_shuffles)
+    amp_prods = ar_surr(signal, n_shuffles=n_shuffles)
     thresh = np.percentile(amp_prods, 95)
 
     padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
@@ -270,9 +270,9 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
             # Number of points between the first and next evaluation time points
             n_range = eval_pts[1] - eval_pts[0]
             # Analytic signal at n=0...n_evals-1 evaluation points, and m=0..n_range time points in between
-            f1 = analytic_signal[:, eval_pts[:-1, np.newaxis] + np.arange(n_range)][:, :, np.newaxis]
+            f1 = analytic_signal[:,eval_pts[:-1, np.newaxis] + np.arange(n_range)]
             # Analytic signal at n=1...n_evals evaluation points, and m=0..n_range time points in between
-            f2 = analytic_signal[:, eval_pts[1:, np.newaxis] + np.arange(n_range)][:, :, np.newaxis]
+            f2 = analytic_signal[:,eval_pts[1:, np.newaxis] + np.arange(n_range)]
 
             # Calculate the phase difference and amplitude product
             phase_diff = np.angle(f2) - np.angle(f1)
@@ -280,18 +280,18 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
             if type == 'coh':
                 # Lagged coherence
-                num = np.squeeze(np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1))
+                num = np.squeeze(np.abs(np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1)))
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
                 denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
-                lc = np.abs(num / denom)
+                lc = num / denom
                 lc[denom < thresh] = 0
 
             elif type == 'plv':
                 expected_phase_diff = lag * 2 * math.pi
-                num = np.squeeze(np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1))
+                num = np.squeeze(np.abs(np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1)))
                 denom = len(eval_pts) - 1
-                lc = np.abs(num / denom)
+                lc = num / denom
 
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
@@ -306,7 +306,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
                 f2_pow = np.power(f2, 2)
                 denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
                 # Calculate LC
-                lc = np.abs(num / denom)
+                lc = num / denom
                 # Threshold based on denominator
                 lc[denom < thresh] = 0
 
