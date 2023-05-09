@@ -9,7 +9,7 @@ function amp_prods=ar_surr(signal, n_shuffles)
     for i=1:n_trials
         % Subtract out the mean and linear trend
         detrend_ord = 1;
-        x=detrend(signal(i,:)-mean(signal(i,:)), detrend_ord);
+        x=detrend(signal(i,:), detrend_ord);
         
         % Estimate an AR model
         mdl = arima(1,0,0);
@@ -18,7 +18,7 @@ function amp_prods=ar_surr(signal, n_shuffles)
         x_sim = simulate(mdl,n_pts,'NumPaths',1000);
 
         % Subtract out the mean and linear trend
-        x_sim=detrend(x_sim-mean(x_sim,2), detrend_ord)';
+        x_sim=detrend(x_sim, detrend_ord)';
         
         for j=1:n_shuffles
             padd_rand_signal = [pad, x_sim(j,:), pad];
