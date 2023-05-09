@@ -35,10 +35,13 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
         The output, shape (n_trials, n_freqs, n_lags).
     """
 
+    detrend_ord=1
+    x = sm.tsa.tsatools.detrend(signal, order=detrend_ord, axis=1)
+
     # Number of trials
-    n_trials = signal.shape[0]
+    n_trials = x.shape[0]
     # Number of time points
-    n_pts = signal.shape[1]
+    n_pts = x.shape[1]
 
     # Number of frequencies
     n_freqs = len(freqs)
@@ -82,7 +85,7 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
                 chunk_stop_time = toi[t_idx] + halfwidth
                 chunk_start = np.argmin(np.abs(time - chunk_start_time))
                 chunk_stop = np.argmin(np.abs(time - chunk_stop_time))
-                chunk = signal[:, chunk_start:chunk_stop]
+                chunk = x[:, chunk_start:chunk_stop]
 
                 # Number of samples in chunk
                 n_samps = chunk.shape[-1]
@@ -204,8 +207,12 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
     lcs : ndarray
         The output, shape (n_trials, n_freqs, n_lags).
     """
-    n_trials = signal.shape[0]
-    n_pts = signal.shape[-1]
+
+    detrend_ord = 1
+    x = sm.tsa.tsatools.detrend(signal, order=detrend_ord, axis=1)
+
+    n_trials = x.shape[0]
+    n_pts = x.shape[-1]
     T = n_pts * 1 / srate
     time = np.linspace(0, T, int(T * srate))
 
@@ -222,10 +229,10 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
     # Compute threshold as 5th percentile of shuffled amplitude
     # products
-    amp_prods = ar_surr(signal, n_shuffles=n_shuffles)
+    amp_prods = ar_surr(x, n_shuffles=n_shuffles)
     thresh = np.percentile(amp_prods, 95)
 
-    padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
+    padd_signal = np.hstack([np.zeros((n_trials, n_pts)), x, np.zeros((n_trials, n_pts))])
     signal_fft = np.fft.rfft(padd_signal, axis=-1)
     fft_frex = np.fft.rfftfreq(padd_signal.shape[-1], d=1 / srate)
     sigma = df * .5
@@ -263,9 +270,6 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
             eval_times = np.linspace(start_time, T - diff, n_evals + 1)[:-1]
             # Evaluation time points
             eval_pts = np.searchsorted(time, eval_times)
-
-            # This was evaluated starting at time t=0 and looking 2 cycles ahead,
-            # but what about the points in between?
 
             # Number of points between the first and next evaluation time points
             n_range = eval_pts[1] - eval_pts[0]
