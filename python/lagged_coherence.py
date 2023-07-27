@@ -50,8 +50,6 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
     T = n_pts * 1 / srate
     time = np.linspace(0, T, int(T * srate))
 
-    filtered_signal = filter_data(signal, srate, freqs[0], freqs[-1], verbose=False)
-
     def run_freq(f_idx):
         freq = freqs[f_idx]
 
@@ -85,7 +83,7 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
                 chunk_stop_time = toi[t_idx] + halfwidth
                 chunk_start = np.argmin(np.abs(time - chunk_start_time))
                 chunk_stop = np.argmin(np.abs(time - chunk_stop_time))
-                chunk = filtered_signal[:, chunk_start:chunk_stop]
+                chunk = signal[:, chunk_start:chunk_stop]
 
                 # Number of samples in chunk
                 n_samps = chunk.shape[-1]
@@ -138,21 +136,21 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
     return lcs
 
 
-def arma_surr(signal, n_shuffles=1000, n_jobs=-1):
+def ar_surr(signal, n_shuffles=1000, n_jobs=-1):
     n_trials = signal.shape[0]
     n_pts = signal.shape[-1]
 
     def sim_data():
-        # Estimate an ARMA model
-        mdl_order = (1, 0, 1)
+        # Estimate an AR model
+        mdl_order = (1, 0, 0)
         mdl = sm.tsa.ARIMA(signal[np.random.randint(low=0, high=n_trials), :], order=mdl_order)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             result = mdl.fit()
             # Make a generative model using the AR parameters
-            arma_process = sm.tsa.ArmaProcess.from_estimation(result)
+            ar_process = sm.tsa.ArmaProcess.from_estimation(result)
             # Simulate a bunch of time-courses from the model
-            return arma_process.generate_sample((1, n_pts), scale=result.resid.std(), axis=1)
+            return ar_process.generate_sample((1, n_pts), scale=result.resid.std(), axis=1)
 
     x_sim = Parallel(
         n_jobs=n_jobs
@@ -227,11 +225,11 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
     # Compute threshold as 5th percentile of shuffled amplitude
     # products
-    amp_prods = arma_surr(filtered_signal, n_shuffles=n_shuffles, n_jobs=n_jobs)
+    amp_prods = ar_surr(filtered_signal, n_shuffles=n_shuffles, n_jobs=n_jobs)
 
     thresh = np.percentile(amp_prods, thresh_prctile)
 
-    padd_signal = np.hstack([np.zeros((n_trials, n_pts)), filtered_signal, np.zeros((n_trials, n_pts))])
+    padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
     signal_fft = np.fft.rfft(padd_signal, axis=-1)
     fft_frex = np.fft.rfftfreq(padd_signal.shape[-1], d=1 / srate)
     sigma = df * .5
@@ -283,24 +281,24 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
             if type == 'coh':
                 # Lagged coherence
-                num = np.squeeze(np.abs(np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1)))
+                num = np.squeeze(np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1))
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
                 denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
 
-                lc = num / denom
+                lc = np.abs(num / denom)
                 lc[denom<thresh]=0
 
             elif type == 'plv':
                 expected_phase_diff = lag * 2 * math.pi
-                num = np.squeeze(np.abs(np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1)))
+                num = np.squeeze(np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1))
                 denom = len(eval_pts) - 1
 
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
                 amp_denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
 
-                lc = num / denom
+                lc = np.abs(num / denom)
                 lc[amp_denom<thresh]=0
 
             elif type == 'amp_coh':
