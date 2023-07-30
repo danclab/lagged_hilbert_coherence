@@ -170,9 +170,8 @@ def ar_surr(signal, n_shuffles=1000, n_jobs=-1):
     f2 = analytic_rand_signal[:,1:]
 
     amp_prod = np.abs(f1) * np.abs(f2)
-    amp_prods = np.mean(amp_prod,axis=-1)
 
-    return amp_prods
+    return amp_prod
 
 
 def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100, type='coh', n_jobs=-1, thresh_prctile=5):
@@ -226,7 +225,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
     # Compute threshold as 5th percentile of shuffled amplitude
     # products
     amp_prods = ar_surr(filtered_signal, n_shuffles=n_shuffles, n_jobs=n_jobs)
-
+    amp_prods = np.mean(amp_prods, axis=-1)
     thresh = np.percentile(amp_prods, thresh_prctile)
 
     padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
@@ -321,4 +320,70 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
     lcs = np.array(lcs)
     lcs = np.moveaxis(lcs, [0, 1, 2], [1, 0, 2])
+    return lcs
+
+
+def lagged_tr_hilbert_coherence(trial, freqs, srate, n_shuffles=1000, lag=1, df=None):
+    # Number of frequencies
+    n_freqs = len(freqs)
+
+    # Create time
+    n_pts = len(trial)
+    T = n_pts * 1 / srate
+    time = np.linspace(0, T, int(T * srate))
+
+    # Frequency resolution
+    if df is None:
+        df = np.diff(freqs)[0]
+
+    filtered_signal = filter_data(trial, srate, freqs[0], freqs[-1], verbose=False)
+    amp_prods = ar_surr(filtered_signal, n_shuffles=n_shuffles, n_jobs=-1)
+    thresh = np.percentile(amp_prods[:], 5)
+
+    padd_signal = np.hstack([np.zeros((n_pts)), trial, np.zeros((n_pts))])
+    signal_fft = np.fft.rfft(padd_signal, axis=-1)
+    fft_frex = np.fft.rfftfreq(padd_signal.shape[-1], d=1 / srate)
+    sigma = df * .5
+
+    lcs = np.zeros((n_freqs, n_pts))
+
+    for f_idx in range(n_freqs):
+
+        freq = freqs[f_idx]
+
+        kernel = np.exp(-((fft_frex - freq) ** 2 / (2.0 * sigma ** 2)))
+
+        fsignal_fft = np.multiply(signal_fft, kernel)
+        f_signal = np.fft.irfft(fsignal_fft, axis=-1)
+
+        # Get analytic signal (phase and amplitude)
+        analytic_signal = hilbert(f_signal, N=None, axis=-1)[n_pts:2 * n_pts]
+
+        # Duration of this lag in pts
+        lag_dur_s = lag / freq
+
+        n_evals = int(np.floor(T / lag_dur_s)) - 1
+
+        end_time = n_evals * lag_dur_s
+        end_time_pt = np.argmin(np.abs(time - end_time))
+
+        for pt in range(end_time_pt):
+            next_time_pt = np.argmin(np.abs(time - (time[pt] + lag_dur_s)))
+
+            # Analytic signal at n=0...-1
+            f1 = analytic_signal[pt]
+            # Analytic signal at n=1,...
+            f2 = analytic_signal[next_time_pt]
+
+            # Phase difference between time points
+            phase_diff = np.angle(f2) - np.angle(f1)
+            # Product of amplitudes at two time points
+            amp_prod = np.abs(f1) * np.abs(f2)
+            # Numerator
+            num = np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff))
+            # denominator is scaling factor
+            denom = np.sqrt(np.sum(np.abs(np.power(f1, 2))) * np.sum(np.abs(np.power(f2, 2))))
+            if denom > thresh:
+                lcs[f_idx, pt] = np.abs(num / denom)
+
     return lcs
