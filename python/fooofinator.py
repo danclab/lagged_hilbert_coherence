@@ -87,4 +87,4 @@ def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(1.0,2.0,.05)):
     fm._calc_r_squared()
     fm._calc_error()
 
-    return fm, lc_smooth
+    return fm, lc_smooth, psd
