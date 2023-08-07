@@ -7,7 +7,7 @@ from scipy.ndimage import gaussian_filter1d
 from lagged_coherence import lagged_hilbert_coherence
 
 
-def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(1.0,2.0,.1)):
+def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(1.0,2.0,.1), n_jobs=-1):
     f, psd = scipy.signal.welch(data, fs=fs, window='hann',
                                 nperseg=fs, noverlap=int(fs / 2), nfft=fs * 2, detrend='constant',
                                 return_onesided=True, scaling='density', axis=- 1, average='mean')
@@ -16,7 +16,7 @@ def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(1.0,2.0,.1)):
     psd = np.mean(psd[:, f_idx], axis=0)
 
     # Fit the aperiodic component
-    lc_hilbert = lagged_hilbert_coherence(data, f, lags, fs, n_shuffles=100)
+    lc_hilbert = lagged_hilbert_coherence(data, f, lags, fs, n_shuffles=100, n_jobs=n_jobs)
 
     sigma = 1.0
     lc_smooth = gaussian_filter1d(np.squeeze(np.nanmean(np.nanmean(lc_hilbert, axis=-1), axis=0)), sigma)
