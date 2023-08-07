@@ -7,7 +7,7 @@ from scipy.ndimage import gaussian_filter1d
 from lagged_coherence import lagged_hilbert_coherence
 
 
-def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(1.0,2.0,.05)):
+def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(1.0,2.0,.1)):
     f, psd = scipy.signal.welch(data, fs=fs, window='hann',
                                 nperseg=fs, noverlap=int(fs / 2), nfft=fs * 2, detrend='constant',
                                 return_onesided=True, scaling='density', axis=- 1, average='mean')
