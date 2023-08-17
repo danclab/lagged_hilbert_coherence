@@ -93,10 +93,10 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
                 hanned = chunk * hann_window
 
                 # Get Fourier coefficients
-                fourier_coef = np.fft.rfft(hanned)
+                fourier_coef = np.fft.fft(hanned)
 
                 # Get frequencies from Fourier transformation
-                fft_freqs = np.fft.rfftfreq(n_samps, d=1.0 / srate)
+                fft_freqs = np.fft.fftfreq(n_samps, d=1.0 / srate)
 
                 # Find frequency closest to given
                 fft_center_freq = np.argmin(np.abs(fft_freqs - freq))
