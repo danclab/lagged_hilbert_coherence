@@ -137,44 +137,50 @@ def lagged_coherence(signal, freqs, lags, srate, win_size=3, type='coh', n_jobs=
 
 
 def ar_surr(signal, n_shuffles=1000, n_jobs=-1):
-    n_trials = signal.shape[0]
+    if len(signal.shape)==1:
+        n_trials=1
+    else:
+        n_trials = signal.shape[0]
     n_pts = signal.shape[-1]
 
-    def sim_data():
+    def sim_data(i):
         # Estimate an AR model
         mdl_order = (1, 0, 0)
-        mdl = sm.tsa.ARIMA(signal[np.random.randint(low=0, high=n_trials), :], order=mdl_order)
+        sim_signal=signal
+        if len(signal.shape)>1:
+            sim_signal=signal[i,:]
+        mdl = sm.tsa.ARIMA(sim_signal, order=mdl_order)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             result = mdl.fit()
             # Make a generative model using the AR parameters
             ar_process = sm.tsa.ArmaProcess.from_estimation(result)
             # Simulate a bunch of time-courses from the model
-            return ar_process.generate_sample((1, n_pts), scale=result.resid.std(), axis=1)
+            return ar_process.generate_sample((n_shuffles, n_pts), scale=result.resid.std(), axis=1)
 
     x_sim = Parallel(
         n_jobs=n_jobs
-    )(delayed(sim_data)() for f in range(n_shuffles))
+    )(delayed(sim_data)(i) for i in range(n_trials))
 
-    x_sim = np.squeeze(np.array(x_sim))
+    x_sim = np.array(x_sim)
 
     pad = np.zeros(x_sim.shape)
 
-    padd_rand_signal = np.hstack([pad, x_sim, pad])
+    padd_rand_signal = np.dstack([pad, x_sim, pad])
     # Get analytic signal (phase and amplitude)
-    analytic_rand_signal = hilbert(padd_rand_signal, N=None)[:,n_pts:2 * n_pts]
+    analytic_rand_signal = hilbert(padd_rand_signal, N=None)[:,:,n_pts:2 * n_pts]
 
     # Analytic signal at n=0...-1
-    f1 = analytic_rand_signal[:,0:-1]
+    f1 = analytic_rand_signal[:,:,0:-1]
     # Analytic signal at n=1,...
-    f2 = analytic_rand_signal[:,1:]
+    f2 = analytic_rand_signal[:,:,1:]
 
     amp_prod = np.abs(f1) * np.abs(f2)
 
     return amp_prod
 
 
-def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100, type='coh', n_jobs=-1, thresh_prctile=5):
+def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100, type='coh', n_jobs=-1, thresh_prctile=95):
     """
     Compute lagged Hilbert coherence (or phase-locking value or amplitude coherence) for a signal.
 
@@ -226,7 +232,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
     # products
     amp_prods = ar_surr(filtered_signal, n_shuffles=n_shuffles, n_jobs=n_jobs)
     amp_prods = np.mean(amp_prods, axis=-1)
-    thresh = np.percentile(amp_prods, thresh_prctile)
+    thresh = np.percentile(amp_prods, thresh_prctile, axis=1)
 
     padd_signal = np.hstack([np.zeros((n_trials, n_pts)), signal, np.zeros((n_trials, n_pts))])
     signal_fft = np.fft.rfft(padd_signal, axis=-1)
@@ -286,7 +292,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
                 denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
 
                 lc = np.abs(num / denom)
-                lc[denom<thresh]=0
+                lc[denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
             elif type == 'plv':
                 expected_phase_diff = lag * 2 * math.pi
@@ -298,7 +304,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
                 amp_denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
 
                 lc = np.abs(num / denom)
-                lc[amp_denom<thresh]=0
+                lc[denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
             elif type == 'amp_coh':
                 # Numerator - sum is over evaluation points
@@ -307,7 +313,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
                 f2_pow = np.power(f2, 2)
                 denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
                 lc = num / denom
-                lc[denom<thresh]=0
+                lc[denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
             # Average over the time points in between evaluation points
             f_lcs[:, l_idx] = np.mean(lc, axis=-1)
