@@ -304,7 +304,7 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
                 amp_denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
 
                 lc = np.abs(num / denom)
-                lc[denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
+                lc[amp_denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
             elif type == 'amp_coh':
                 # Numerator - sum is over evaluation points
