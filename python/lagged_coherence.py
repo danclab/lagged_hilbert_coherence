@@ -180,7 +180,7 @@ def ar_surr(signal, n_shuffles=1000, n_jobs=-1):
     return amp_prod
 
 
-def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100, type='coh', n_jobs=-1, thresh_prctile=95):
+def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=1000, type='coh', n_jobs=-1, thresh_prctile=95):
     """
     Compute lagged Hilbert coherence (or phase-locking value or amplitude coherence) for a signal.
 
