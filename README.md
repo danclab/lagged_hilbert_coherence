@@ -4,7 +4,7 @@ Lagged Hilbert coherence, phase-locking value, and amplitude coherence
 ## Requirements
 python version: joblib, scipy, numpy, statsmodels
 
-matlab version: econometrics toolbox, signal processing toolbox
+matlab version: parallel processing toolbox, signal processing toolbox
 
 # Python files
 - lagged_coherence.py: core functions
