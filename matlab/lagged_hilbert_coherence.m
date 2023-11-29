@@ -17,6 +17,17 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
     T = n_pts * dt;
     time=0:dt:T-dt;
     
+    % Check that epochs are long enough for requested frequencies and lags
+    min_freq = min(freqs);
+    max_lag = max(lags);
+    lag_dur_s = max([max_lag / min_freq, 1 / srate]);
+    min_epoch_len = 2 * lag_dur_s;
+
+    if T < min_epoch_len
+        error('Epoch length must be at least %.2fs to evaluate LHC at %.2f Hz and %.2f cycles', ...
+              min_epoch_len, min_freq, max_lag);
+    end
+
     % Bandpass filtering using multiplication by a Gaussian kernel
     % in the frequency domain
     n_freqs=length(freqs);
