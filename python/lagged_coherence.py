@@ -220,6 +220,18 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
     # Number of lags
     n_lags = len(lags)
 
+    # Check that epochs are long enough for requested frequencies and lags - just have to check number of eval pts for
+    # lowest frequency and longest lag
+    min_freq=np.min(freqs)
+    max_lag=np.max(lags)
+    lag_dur_s = np.max([max_lag / min_freq, 1 / srate])
+    min_epoch_len = 2 * lag_dur_s
+    if T<min_epoch_len:
+        raise ValueError('Epoch length must be at least {min_len:.2f}s to evaluate LHC at {min_freq:.2f} Hz and {max_lag:.2f} cycles'.format(
+            min_len=min_epoch_len,
+            min_freq=min_freq,
+            max_lag=max_lag))
+
     # Bandpass filtering using multiplication by a Gaussian kernel
     # in the frequency domain
     # Frequency resolution
