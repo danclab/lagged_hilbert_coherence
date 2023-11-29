@@ -68,7 +68,7 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
             lag=lags(l_idx);
             
             % Duration of this lag in s
-            lag_dur_s = lag / freq;
+            lag_dur_s = max([lag / freq, 1/srate]);
             % Number of evaluations
             n_evals = floor(T / lag_dur_s);
             % Remaining time
@@ -105,7 +105,7 @@ function lcs=lagged_hilbert_coherence(signal, freqs, lags, ...
                 f1_pow = f1.^2;
                 f2_pow = f2.^2;
                 denom = squeeze(sqrt(sum(abs(f1_pow),2) .* sum(abs(f2_pow),2)));
-                lc = abs(num ./ denom);;
+                lc = abs(num ./ denom);
                 lc(denom < repmat(thresh, [1, size(lc, 2)])) = 0;
             elseif strcmp(type,'plv')
                 expected_phase_diff = lag * 2 * pi;
