@@ -260,7 +260,8 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
         for l_idx, lag in enumerate(lags):
             # Duration of this lag in s
-            lag_dur_s = lag / freq
+            lag_dur_s = np.max([lag / freq, 1/srate])
+
             # Number of evaluations
             n_evals = int(np.floor(T / lag_dur_s))
             # Remaining time
@@ -286,32 +287,32 @@ def lagged_hilbert_coherence(signal, freqs, lags, srate, df=None, n_shuffles=100
 
             if type == 'coh':
                 # Lagged coherence
-                num = np.squeeze(np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1))
+                num = np.sum(amp_prod * np.exp(complex(0, 1) * phase_diff), axis=1)
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
-                denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
+                denom = np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1))
 
                 lc = np.abs(num / denom)
                 lc[denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
             elif type == 'plv':
                 expected_phase_diff = lag * 2 * math.pi
-                num = np.squeeze(np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1))
+                num = np.sum(np.exp(complex(0, 1) * (expected_phase_diff - phase_diff)), axis=1)
                 denom = len(eval_pts) - 1
 
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
-                amp_denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
+                amp_denom = np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1))
 
                 lc = np.abs(num / denom)
                 lc[amp_denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
             elif type == 'amp_coh':
                 # Numerator - sum is over evaluation points
-                num = np.squeeze(np.sum(amp_prod, axis=1))
+                num = np.sum(amp_prod, axis=1)
                 f1_pow = np.power(f1, 2)
                 f2_pow = np.power(f2, 2)
-                denom = np.squeeze(np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1)))
+                denom = np.sqrt(np.sum(np.abs(f1_pow), axis=1) * np.sum(np.abs(f2_pow), axis=1))
                 lc = num / denom
                 lc[denom<np.tile(thresh, (lc.shape[1], 1)).T]=0
 
