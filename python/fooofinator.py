@@ -54,7 +54,7 @@ def fooofinator(data, fs, freqs, alpha=0.1, lags=np.arange(0.1,2.0,.01), thresh_
         err = np.sqrt(np.sum(np.power(spec - fit_target, 2)))
         cost = np.sum(np.abs(resid[resid < 0]))
 
-        return err+alpha+cost
+        return err+alpha*cost
 
     init_params = [fit_target[0],
                    fit_target[-1] - fit_target[0],
